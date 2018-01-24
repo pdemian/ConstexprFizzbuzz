@@ -1,0 +1,119 @@
+/*
+Copyright (c) 2018 Patrick Demian
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+#include <iostream>
+
+//a constexpr string implementation
+template<int n>
+struct ConstexprString {
+	int length;
+	char str[n + 1];
+
+	constexpr explicit ConstexprString() : length(n), str{} {}
+	constexpr explicit ConstexprString(char const (&s)[n+1]) : length(n), str{} {
+		for(int i = 0; i < n; i++) {
+			str[i] = s[i];
+		}
+	}
+};
+
+//concat strings during compile time
+template<int n, int m>
+constexpr auto operator+(ConstexprString<n> const& x, ConstexprString<m> const& y) {
+	ConstexprString<n + m> retval{};
+
+	for (int i = 0; i < x.length; i++) {
+		retval.str[i] = x.str[i];
+	}
+	for (int i = 0; i < y.length; i++) {
+		retval.str[i + x.length] = y.str[i];
+	}
+
+	retval.str[n + m] = '\0';
+
+	return retval;
+}
+
+namespace Details {
+	//count the number of digits for optimal number of bytes used
+	//rather than something like std::numeric_limits<int>::digits10
+	//DigitCounter<12345> ==> 5
+	template<int k>
+	struct DigitCounter { static constexpr int Value = 1 + DigitCounter<k / 10>::Value; };
+
+	template<>
+	struct DigitCounter<0> { static constexpr int Value = 0; };
+
+	//We need to convert the integer value to a string value for non-fizz/buzz values
+	template<int n>
+	struct ConstexprIota {
+	private:
+		static constexpr int digit_count = DigitCounter<n>::Value;
+
+	public:
+		static constexpr auto Value() {
+			ConstexprString<digit_count> retval{};
+
+			for (int i = digit_count - 1, number = n; i >= 0; i--, number /= 10) {
+				
+				//If you assume ASCII, you can subtract '0' from i
+				//However this is more portable
+				retval.str[i] = "0123456789"[number % 10];
+			}
+
+			retval.str[digit_count] = '\0';
+			retval.length = digit_count;
+			return retval;
+		}
+	};
+
+	template<int n, bool div_3, bool div_5>
+	struct FizzBuzzValue { static constexpr auto Value = ConstexprIota<n>::Value() + ConstexprString<1>("\n"); };
+
+	template<int n>
+	struct FizzBuzzValue<n, true, true> { static constexpr auto Value = ConstexprString<sizeof("FizzBuzz\n") - 1>("FizzBuzz\n"); };
+
+	template<int n>
+	struct FizzBuzzValue<n, true, false> { static constexpr auto Value = ConstexprString<sizeof("Fizz\n") - 1>("Fizz\n"); };
+
+	template<int n>
+	struct FizzBuzzValue<n, false, true> { static constexpr auto Value = ConstexprString<sizeof("Buzz\n") - 1>("Buzz\n"); };
+
+};
+
+template<int n>
+struct FizzBuzz {
+private:
+	static constexpr bool is_div3 = n % 3 == 0;
+	static constexpr bool is_div5 = n % 5 == 0;
+	static constexpr auto str = Details::FizzBuzzValue<n, is_div3, is_div5>::Value;
+public:
+	static constexpr auto Value = FizzBuzz<n - 1>::Value + str;
+};
+
+template<>
+struct FizzBuzz<0> { static constexpr auto Value = ConstexprString<0>(); };
+
+int main() {
+	puts(FizzBuzz<100>::Value.str);
+	return 0;
+}
