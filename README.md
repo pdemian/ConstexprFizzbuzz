@@ -7,7 +7,7 @@ Because sometimes you want your fizzbuzz lightning fast&dagger; on any computer&
 
 &dagger;Compilation time may be extremely long (several minutes)
 
-&Dagger;Tested only to work on VS 17 (up to FizzBuzz<497> due to template limitations) and GCC 7+ (up to FizzBuzz<285> until GCC crashed)
+&Dagger;Tested only to work on VS 17 (up to FizzBuzz<497> due to template limitations), GCC 7+ (up to FizzBuzz<285> until GCC crashed), and clang (trunk) (up to FizzBuzz<900> until I got bored of waiting for compilation)
 
 ## No but really, why?
 
