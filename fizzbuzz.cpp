@@ -63,24 +63,27 @@ namespace Details {
 		return retval;
 	}
 
-	//count the number of digits for optimal number of bytes used
-	//rather than something like std::numeric_limits<int>::digits10
-	//DigitCounter<12345> ==> 5
-	template<int k>
-	struct DigitCounter { static constexpr int Value = 1 + DigitCounter<k / 10>::Value; };
-
-	template<>
-	struct DigitCounter<0> { static constexpr int Value = 0; };
-
 	//We need to convert the integer value to a string value for non-fizz/buzz values
 	template<int n>
 	struct ConstexprIota {
 	private:
-		static constexpr int digit_count = DigitCounter<n>::Value;
+		//count the number of digits for optimal number of bytes used
+		//rather than something like std::numeric_limits<int>::digits10
+		//DigitCounter<12345> ==> 5
+		static constexpr int DigitCounter() {
+			int count = 0;
+			for (int i = n; i > 0; i /= 10) {
+				count++;
+			}
 
+			return count;
+		}
 	public:
 		static constexpr auto Value() {
-			ConstexprString<digit_count + 1> retval{};
+			int digit_count = DigitCounter();
+
+			//unfortunately ConstexprString<digit_count + 1> doesn't work, we need to call it directly
+			ConstexprString<DigitCounter() + 1> retval{};
 
 			for (int i = digit_count - 1, number = n; i >= 0; i--, number /= 10) {
 
